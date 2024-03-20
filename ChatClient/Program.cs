@@ -31,7 +31,7 @@ namespace Client.Program
 
 				if (!valid)
 				{
-					Terminal.Print($"Invalid username. Attempt: {attempt}/{ClientConfig.MaxLoginAttempts}");
+					Terminal.Print($"Invalid host. Attempt: {attempt}/{ClientConfig.MaxLoginAttempts}");
 					attempt++;
 				}
 				else
