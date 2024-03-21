@@ -6,20 +6,49 @@ using Libs.Terminal;
 
 namespace Client
 {
-
 	public class Host
 	{
 		string host = "localhost";
 		public bool validHost = false;
+		int port = 0;
 
-		public Host(string host)
+		public Host(string host, int port)
 		{
 			this.host = host;
+			this.port = port;
 		}
 
 		public async Task<bool> Validate()
 		{
-			return false;
+			Terminal.Print($"Attempting connection to {host}:{port}...");
+			bool validated = false;
+
+			using (HttpClient client = new HttpClient())
+			{
+				try
+				{
+					HttpResponseMessage response = await client.GetAsync(this.FormatHost());
+					if (response.IsSuccessStatusCode)
+					{
+						return true;
+					}
+					else
+					{
+						return false;
+					}
+				}
+				catch (Exception ex)
+				{
+					ErrorMessage error = new ErrorMessage("Error finding host: " + ex.Message);
+					Console.WriteLine(error.ToString());
+				}
+			}
+			return validated;
+		}
+
+		public string FormatHost()
+		{
+			return new string($"http://{this.host}:{port}/");
 		}
 	}
 
@@ -47,7 +76,7 @@ namespace Client
 
 				try
 				{
-					HttpResponseMessage response = await client.GetAsync(Client.apiUrl + this.username); 
+					HttpResponseMessage response = await client.GetAsync(Client.apiUrl); 
 
 					if (response.IsSuccessStatusCode)
 					{
@@ -62,7 +91,6 @@ namespace Client
 				{
 					ErrorMessage error = new ErrorMessage("Error validating user: " + ex.Message);
 					Console.WriteLine(error.ToString());
-					Console.ReadKey();
 				}
 			}
 			return validated;
@@ -172,6 +200,10 @@ namespace Client
 	public class Client
 	{
 		public static string apiUrl = "http://localhost:15672/api/users/";
+
+		public static string defaultHost = "localhost";
+		public static int defaultPort = 15672;
+		
 		int clientID = 0;
 		string clientName = "";
 		User? user;
@@ -192,7 +224,7 @@ namespace Client
 			this.clientID = 0;
 			this.clientName = user.username;
 
-			user = new User(clientName, "localhost");
+			user = new User(clientName, host);
 
 			connection = new Connection(host, user);
 		}

@@ -12,7 +12,7 @@ namespace Client.Program
 	{
 		static Client client = new Client(0, "NULL");
 		static User user = new User("NULL", "NULL");
-		static Host host = new Host("localhost");
+		static Host host = new Host("localhost", 15672);
 
 		static async Task<bool> ValidateHost()
 		{
@@ -21,9 +21,28 @@ namespace Client.Program
 
 			while (!valid && attempt < ClientConfig.MaxLoginAttempts)
 			{
-				string hostName = Terminal.Prompt("Enter a host (e.g. localhost):");
+				string hostName = "";
+				int port = 0;
+				string input = Terminal.Prompt("Enter a host (e.g. localhost):");
 
-				host = new Host(hostName);
+				if (input == "")
+				{
+					hostName = Client.defaultHost;
+					port = Client.defaultPort;
+				}
+				else
+				{
+					string[] subString = input.Split(':');
+					hostName = subString[0];
+					port = int.Parse(subString[1]);
+
+					if (port == 0)
+					{
+						port = Client.defaultPort;
+					}
+				}
+
+				host = new Host(hostName, port);
 
 				host.validHost = await host.Validate();
 
@@ -31,7 +50,7 @@ namespace Client.Program
 
 				if (!valid)
 				{
-					Terminal.Print($"Invalid host. Attempt: {attempt}/{ClientConfig.MaxLoginAttempts}");
+					Terminal.Print($"Invalid host. Attempt: {attempt+1}/{ClientConfig.MaxLoginAttempts}");
 					attempt++;
 				}
 				else
@@ -60,7 +79,7 @@ namespace Client.Program
 				}
 				else
 				{
-					Terminal.Print($"Invalid username. Attempt: {attempt}/{ClientConfig.MaxLoginAttempts}");
+					Terminal.Print($"Invalid username. Attempt: {attempt+1}/{ClientConfig.MaxLoginAttempts}");
 					attempt++;
 				}
 			}
@@ -104,16 +123,16 @@ namespace Client.Program
 
 				Terminal.Print($"[*] Started listening to room topic. Your username is: {client.connection.user.username}");
 
-				while (true)
+				while (channel.IsOpen)
 				{
-					string message = Terminal.Prompt("");
+					string message = Terminal.Prompt($"{user.username}: \b");
 
 					if (message.ToLower() == "exit")
 					{
 						break;
 					}
 
-					byte[] messageBytes = Encoding.UTF8.GetBytes(message);
+					byte[] messageBytes = Encoding.UTF8.GetBytes($"{user.username}: {message}");
 					channel.BasicPublish(exchange: "room", routingKey: "", basicProperties: null, body: messageBytes);
 				}
 			}

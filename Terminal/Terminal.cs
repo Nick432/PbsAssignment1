@@ -23,7 +23,7 @@ namespace Libs.Terminal
 
 		public static string Prompt(string message)
 		{
-			Print(message);
+			Console.Write(message);
 			string? input = "";
 
 			input = Console.ReadLine();
