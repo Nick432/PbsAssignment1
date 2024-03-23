@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Text.RegularExpressions;
 
 namespace Client
 {
@@ -18,7 +19,7 @@ namespace Client
 		{
 			this.encoding = encoding;
 			this.sender = sender;
-			this.message = this.Serialize(FormatMessage(message));
+			this.message = FormatMessage(message);
 		}
 
 
@@ -27,9 +28,12 @@ namespace Client
 			string? input = Encoding.UTF8.GetString(messageBytes);
 		}
 
-
+		
 		public string Serialize(string message)
 		{
+			//$sam:$encoding.utf8:%message;
+			//$sam:$encoding.utf8:#3:#6:$message;
+			
 			return new string($"{sender.username}{field}{this.encoding}{field}{this.message}{record}");
 		}
 

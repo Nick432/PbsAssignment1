@@ -4,7 +4,10 @@ using Libs.Terminal;
 using Client;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
-
+using EasyNetQ;
+using EasyNetQ.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using EasyNetQ.DI;
 
 namespace Client.Program
 {
@@ -13,6 +16,8 @@ namespace Client.Program
 		static Client client = new Client(0, "NULL");
 		static User user = new User("NULL", "NULL");
 		static Host host = new Host("localhost", 15672);
+
+		private static IBus _bus;
 
 		static async Task<bool> ValidateHost()
 		{
@@ -71,7 +76,6 @@ namespace Client.Program
 				string Username = Terminal.Prompt("Enter your username:");
 
 				user = new User(Username, "NULL");
-
 				user.validUser = await user.Validate();
 
 				if (user.validUser)
@@ -97,56 +101,11 @@ namespace Client.Program
 		{
 			Terminal.Print("Connecting...");
 
-			using (IModel? channel = client.connection.Channel())
+			using (_bus = RabbitHutch.CreateBus("host=" + host.host, x => x.Register<ILogger>(_ => new EmptyLogger())))
 			{
-				if (channel == null)
-				{
-					return;
-				}
-
-				channel.ExchangeDeclare(exchange: "room", type: "topic", durable: true);
-
-				EventingBasicConsumer consumer = new EventingBasicConsumer(channel);
-				string queueName = channel.QueueDeclare().QueueName;
-
-				channel.DefaultConsumer = consumer;
-				channel.QueueBind(queue: channel.QueueDeclare().QueueName, exchange: "room", routingKey: "");
-
-				Terminal.Print($"[*] Started listening to room topic. Your username is: {client.connection.user.username}");
-
-				while (channel.IsOpen)
-				{
-
-					consumer.Received += (model, ea) =>
-					{
-						byte[] body = ea.Body.ToArray();
-						string message = Encoding.UTF8.GetString(body);
-
-						Message receive = new Message(body);
-
-						Terminal.Print(ea.RoutingKey, message);
-						
-					};
-					channel.BasicConsume(queue: "hello", autoAck: true, consumer: consumer);
-
-					string message = Terminal.Prompt($"{user.username}: \b");
-
-					if (message.ToLower() == "exit")
-					{
-						break;
-					}
-
-					Message chatMessage = new Message(message, Encoding.UTF8, user);
-
-					channel.BasicPublish(exchange: string.Empty,
-					 routingKey: "hello",
-					 basicProperties: null,
-					 body: chatMessage.Encoded());
-
-					//Client.SendMessage(host, chatMessage);
-					
-				}
-			}
+				// need to subscribe to channels
+				// need to push
+			};
 		}
 
 		public static async Task Initialize()
@@ -170,6 +129,7 @@ namespace Client.Program
 				Connect();
 			}
 		}
+
 		public static int Main(string[] args)
 		{
 			Initialize().GetAwaiter().GetResult();
@@ -177,4 +137,25 @@ namespace Client.Program
 			return (0);
 		}
 	}
+
+	public class EmptyLogger : ILogger
+	{
+		public void InfoWrite(string format, params object[] args)
+		{
+		}
+
+		public void ErrorWrite(string format, params object[] args)
+		{
+		}
+
+		public void ErrorWrite(Exception exception)
+		{
+		}
+
+		public bool Log(LogLevel logLevel, Func<string> messageFunc, Exception exception = null, params object[] formatParameters)
+		{
+			throw new NotImplementedException();
+		}
+	}
+
 }

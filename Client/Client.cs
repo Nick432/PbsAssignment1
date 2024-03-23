@@ -163,39 +163,7 @@ namespace Client
 
 			return _ichannel;
 		}
-		/*
-
-		public void Connect()
-		{
-			using IConnection iConnection = c_Factory.CreateConnection();
-			using IModel channel = iConnection.CreateModel();
-
-			channel.QueueDeclare(
-				queue: "letterbox",
-				durable: false,
-				exclusive: false,
-				autoDelete: false,
-				arguments: null);
-
-			Message firstMessage = new Message("Hello World", Encoding.UTF8, user);
-
-			EventingBasicConsumer consumer = new EventingBasicConsumer(channel);
-
-			consumer.Received += (model, ea) =>
-			{
-				byte[] body = ea.Body.ToArray();
-				string decodedMessage = Encoding.UTF8.GetString(body);
-			};
-
-			channel.BasicConsume(queue: "letterbox", autoAck: true, consumer);
-
-			Console.ReadKey();
-
-			//string firstMessage = $"[{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}][{this.username}]: Hello World"
-		}
-		*/
 	}
-
 
 	public class Client
 	{
@@ -229,26 +197,5 @@ namespace Client
 			connection = new Connection(host, user);
 		}
 
-		public static void SendMessage(Host host, Message message)
-		{
-
-			ConnectionFactory factory = new ConnectionFactory() { HostName = host.host };
-			using IConnection connection = factory.CreateConnection();
-			using IModel channel = connection.CreateModel();
-
-			channel.QueueDeclare(queue: "hello",
-				durable: false,
-				exclusive: false,
-				autoDelete: false,
-				arguments: null);
-
-			channel.BasicPublish(exchange: string.Empty,
-				routingKey: "hello",
-				basicProperties: null,
-				body: message.Encoded());
-
-			Terminal.Print($"[{connection.ClientProvidedName}]: {message.message}");
-
-		}
 	}
 }
