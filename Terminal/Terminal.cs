@@ -21,6 +21,18 @@ namespace Libs.Terminal
 			Print(output);
 		}
 
+		public static string ReadLine()
+		{
+			string? input = "";
+
+			input = Console.ReadLine();
+
+			if (input == null)
+				input = "";
+
+			return input;
+		}
+
 		public static string Prompt(string message)
 		{
 			Console.Write(message);

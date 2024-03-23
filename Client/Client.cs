@@ -100,19 +100,17 @@ namespace Client
 	public class Connection
 	{
 		// Connection Variables
-		ConnectionFactory c_Factory = new ConnectionFactory();
+		public static ConnectionFactory c_Factory = new ConnectionFactory();
 
-		IConnection? _iconnection;
-		IModel? _ichannel;
+		public static IConnection? _iconnection;
+		public static IModel? _ichannel;
 
-		string hostName = "";
-		string username = "";
+		Host host;
 		public User user;
 
-		public Connection(string host, User user)
+		public Connection(Host host, User user)
 		{
-			this.hostName = host;
-			this.username = user.username;
+			this.host = host;
 			this.user = user;
 
 			Initialize();
@@ -120,48 +118,10 @@ namespace Client
 
 		void Initialize()
 		{
-			c_Factory = new ConnectionFactory() 
-			{ 
-				HostName = this.hostName, 
-				UserName = this.username 
+			c_Factory = new ConnectionFactory()
+			{
+				HostName = this.host.host
 			};
-		}
-
-		public IConnection Connect()
-		{
-			try
-			{
-				c_Factory.CreateConnection();
-			}
-			catch
-			{
-
-			}
-
-			return c_Factory.CreateConnection();
-		}
-
-		public IModel? Channel(IConnection con)
-		{
-			return con.CreateModel();
-		}
-
-		public IModel? Channel()
-		{
-			try
-			{
-				_iconnection = c_Factory.CreateConnection();
-				_ichannel = _iconnection.CreateModel();
-			}
-			catch (Exception ex)
-			{
-				ErrorMessage error = new ErrorMessage(ex.Message);
-
-				Terminal.Print(error.ToString());
-				Console.ReadKey();
-			}
-
-			return _ichannel;
 		}
 	}
 
@@ -172,30 +132,65 @@ namespace Client
 		public static string defaultHost = "localhost";
 		public static int defaultPort = 15672;
 		
-		int clientID = 0;
-		string clientName = "";
 		User? user;
-		public Connection connection;
+		Host? host;
 
-		public Client(int clientID, string clientName, string host = "localhost")
+		static ConnectionFactory factory = new ConnectionFactory();
+		static IConnection? connection;
+		static IModel? channel;
+
+		public Client(User user, Host host)
 		{
-			this.clientID = clientID;
-			this.clientName = clientName;
-
-			user = new User(clientName, "localhost");
-
-			connection = new Connection(host, user);
+			this.user = new User(user.username, host.host);
+			this.host = host;
 		}
 
-		public Client(User user, string host = "localhost")
+		public async Task Listen()
 		{
-			this.clientID = 0;
-			this.clientName = user.username;
+			using (connection = factory.CreateConnection())
+			using (channel = connection.CreateModel())
+			{
+				Terminal.Print($"Listening to [{this.host.host}]...");
+				EventingBasicConsumer consumer = new EventingBasicConsumer(channel);
+				consumer.Received += (model, ea) =>
+				{
+					Message message = Message.Receive(ea.Body.ToArray());
 
-			user = new User(clientName, host);
+					Terminal.Print(message);
+				};
+				channel.BasicConsume(queue: "room", autoAck: true, consumer: consumer);
+				await Task.Delay(-1);
+			};
 
-			connection = new Connection(host, user);
 		}
+
+		public async Task Connect()
+		{
+			factory = new ConnectionFactory() { HostName = this.host.host};
+
+			using (connection = factory.CreateConnection())
+			using (channel = connection.CreateModel())
+			{
+				channel.ExchangeDeclare(exchange: "direct_logs", type: "direct");
+
+				string routingKey = "chatMessage";
+
+				Message.Joined(user, channel, routingKey);
+
+				while (true)
+				{
+					Console.Write($"[{user.username}]: ");
+					string chatMessage = Console.ReadLine();
+
+					Message message = new Message(chatMessage, Encoding.UTF8, user);
+
+					message.Send(channel, routingKey);
+					await Task.Delay(1000);
+				}
+			};
+
+		}
+
 
 	}
 }

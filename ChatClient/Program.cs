@@ -13,11 +13,10 @@ namespace Client.Program
 {
 	class Program
 	{
-		static Client client = new Client(0, "NULL");
+		
 		static User user = new User("NULL", "NULL");
 		static Host host = new Host("localhost", 15672);
-
-		private static IBus _bus;
+		static Client client = new Client(user, host);
 
 		static async Task<bool> ValidateHost()
 		{
@@ -97,17 +96,6 @@ namespace Client.Program
 			return true;
 		}
 
-		static void Connect()
-		{
-			Terminal.Print("Connecting...");
-
-			using (_bus = RabbitHutch.CreateBus("host=" + host.host, x => x.Register<ILogger>(_ => new EmptyLogger())))
-			{
-				// need to subscribe to channels
-				// need to push
-			};
-		}
-
 		public static async Task Initialize()
 		{
 			bool validHost = false;
@@ -125,37 +113,22 @@ namespace Client.Program
 
 			if (validUser && validHost)
 			{
-				client = new Client(0, user.username, host.host);
-				Connect();
+				client = new Client(user, host);
+
+				Task listen = client.Listen();
+				Task connect = client.Connect();
+				
+				await Task.WhenAll(listen, connect);
 			}
 		}
 
 		public static int Main(string[] args)
 		{
+			// As we are running this task async we need to await the final result of all subsequent async tasks.
 			Initialize().GetAwaiter().GetResult();
-
 			return (0);
 		}
 	}
 
-	public class EmptyLogger : ILogger
-	{
-		public void InfoWrite(string format, params object[] args)
-		{
-		}
-
-		public void ErrorWrite(string format, params object[] args)
-		{
-		}
-
-		public void ErrorWrite(Exception exception)
-		{
-		}
-
-		public bool Log(LogLevel logLevel, Func<string> messageFunc, Exception exception = null, params object[] formatParameters)
-		{
-			throw new NotImplementedException();
-		}
-	}
-
+	
 }

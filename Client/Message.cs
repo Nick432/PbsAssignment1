@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
+using RabbitMQ.Client;
 
 namespace Client
 {
@@ -11,7 +12,7 @@ namespace Client
 	{
 		public string message;
 		Encoding encoding;
-		User sender;
+		public User sender;
 		public static char field = (char)11;
 		public static char record = (char)12;
 
@@ -22,13 +23,11 @@ namespace Client
 			this.message = FormatMessage(message);
 		}
 
-
 		public Message(byte[] messageBytes)
 		{
-			string? input = Encoding.UTF8.GetString(messageBytes);
+
 		}
 
-		
 		public string Serialize(string message)
 		{
 			//$sam:$encoding.utf8:%message;
@@ -51,9 +50,26 @@ namespace Client
 			return encodedBytes;
 		}
 
-		public void Send()
+		public void Send(IModel channel, string routingKey)
 		{
+			channel.BasicPublish(exchange: "direct_logs",
+				routingKey: routingKey,
+				basicProperties: null,
+				body: this.Encoded());
+		}
 
+		public static Message Receive(byte[] messageBytes)
+		{
+			Message message = new Message(messageBytes);
+
+
+			return message;
+		}
+
+		public static void Joined(User user, IModel channel, string routingKey)
+		{
+			Message joined = new Message($"Joined {DateTime.Now}", Encoding.UTF8, user);
+			joined.Send(channel, routingKey);
 		}
 	}
 }
