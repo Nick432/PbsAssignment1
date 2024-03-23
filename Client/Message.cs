@@ -8,20 +8,34 @@ namespace Client
 {
 	public class Message
 	{
-		string message;
+		public string message;
 		Encoding encoding;
 		User sender;
+		public static char field = (char)11;
+		public static char record = (char)12;
 
 		public Message(string message, Encoding encoding, User sender)
 		{
 			this.encoding = encoding;
 			this.sender = sender;
-			this.message = FormatMessage(message);
+			this.message = this.Serialize(FormatMessage(message));
+		}
+
+
+		public Message(byte[] messageBytes)
+		{
+			string? input = Encoding.UTF8.GetString(messageBytes);
+		}
+
+
+		public string Serialize(string message)
+		{
+			return new string($"{sender.username}{field}{this.encoding}{field}{this.message}{record}");
 		}
 
 		public string FormatMessage(string message)
 		{
-			string formattedMessage = $"[{sender.username}] {message}";
+			string formattedMessage = $"[{sender.username}]: {message}";
 
 			return formattedMessage;
 		}

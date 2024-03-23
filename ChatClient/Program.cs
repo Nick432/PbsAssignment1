@@ -60,6 +60,7 @@ namespace Client.Program
 			}
 			return host.validHost;
 		}
+
 		static async Task<bool> ValidateUser()
 		{
 			int attempt = 0;
@@ -92,7 +93,6 @@ namespace Client.Program
 			return true;
 		}
 
-
 		static void Connect()
 		{
 			Terminal.Print("Connecting...");
@@ -104,27 +104,31 @@ namespace Client.Program
 					return;
 				}
 
-				channel.ExchangeDeclare(exchange: "room", type: "topic");
-
-				string queueName = channel.QueueDeclare().QueueName;
-				channel.QueueBind(queue: channel.QueueDeclare().QueueName, exchange: "room", routingKey: "");
+				channel.ExchangeDeclare(exchange: "room", type: "topic", durable: true);
 
 				EventingBasicConsumer consumer = new EventingBasicConsumer(channel);
+				string queueName = channel.QueueDeclare().QueueName;
 
-				consumer.Received += (model, ea) =>
-				{
-					byte[] body = ea.Body.ToArray();
-					string message = Encoding.UTF8.GetString(body);
-
-					Terminal.Print(ea.RoutingKey, message);
-				};
-
-				channel.BasicConsume(queue: queueName, autoAck: true, consumer: consumer);
+				channel.DefaultConsumer = consumer;
+				channel.QueueBind(queue: channel.QueueDeclare().QueueName, exchange: "room", routingKey: "");
 
 				Terminal.Print($"[*] Started listening to room topic. Your username is: {client.connection.user.username}");
 
 				while (channel.IsOpen)
 				{
+
+					consumer.Received += (model, ea) =>
+					{
+						byte[] body = ea.Body.ToArray();
+						string message = Encoding.UTF8.GetString(body);
+
+						Message receive = new Message(body);
+
+						Terminal.Print(ea.RoutingKey, message);
+						
+					};
+					channel.BasicConsume(queue: "hello", autoAck: true, consumer: consumer);
+
 					string message = Terminal.Prompt($"{user.username}: \b");
 
 					if (message.ToLower() == "exit")
@@ -132,8 +136,15 @@ namespace Client.Program
 						break;
 					}
 
-					byte[] messageBytes = Encoding.UTF8.GetBytes($"{user.username}: {message}");
-					channel.BasicPublish(exchange: "room", routingKey: "", basicProperties: null, body: messageBytes);
+					Message chatMessage = new Message(message, Encoding.UTF8, user);
+
+					channel.BasicPublish(exchange: string.Empty,
+					 routingKey: "hello",
+					 basicProperties: null,
+					 body: chatMessage.Encoded());
+
+					//Client.SendMessage(host, chatMessage);
+					
 				}
 			}
 		}
@@ -153,9 +164,9 @@ namespace Client.Program
 				validUser = await ValidateUser();
 			}
 
-			if (validUser)
+			if (validUser && validHost)
 			{
-				client = new Client(0, user.username, "localhost");
+				client = new Client(0, user.username, host.host);
 				Connect();
 			}
 		}

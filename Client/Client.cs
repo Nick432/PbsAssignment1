@@ -8,7 +8,7 @@ namespace Client
 {
 	public class Host
 	{
-		string host = "localhost";
+		public string host = "localhost";
 		public bool validHost = false;
 		int port = 0;
 
@@ -227,6 +227,28 @@ namespace Client
 			user = new User(clientName, host);
 
 			connection = new Connection(host, user);
+		}
+
+		public static void SendMessage(Host host, Message message)
+		{
+
+			ConnectionFactory factory = new ConnectionFactory() { HostName = host.host };
+			using IConnection connection = factory.CreateConnection();
+			using IModel channel = connection.CreateModel();
+
+			channel.QueueDeclare(queue: "hello",
+				durable: false,
+				exclusive: false,
+				autoDelete: false,
+				arguments: null);
+
+			channel.BasicPublish(exchange: string.Empty,
+				routingKey: "hello",
+				basicProperties: null,
+				body: message.Encoded());
+
+			Terminal.Print($"[{connection.ClientProvidedName}]: {message.message}");
+
 		}
 	}
 }
