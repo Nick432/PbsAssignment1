@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using RabbitMQ.Client;
 
-namespace Client.Structs
+namespace Client
 {
 	public class Message
 	{
@@ -32,8 +32,8 @@ namespace Client.Structs
 		{
 			//$sam:$encoding.utf8:%message;
 			//$sam:$encoding.utf8:#3:#6:$message;
-
-			return new string($"{sender.username}{field}{encoding}{field}{this.message}{record}");
+			
+			return new string($"{sender.username}{field}{this.encoding}{field}{this.message}{record}");
 		}
 
 		public string FormatMessage(string message)
@@ -55,7 +55,7 @@ namespace Client.Structs
 			channel.BasicPublish(exchange: "direct_logs",
 				routingKey: routingKey,
 				basicProperties: null,
-				body: Encoded());
+				body: this.Encoded());
 		}
 
 		public static Message Receive(byte[] messageBytes)

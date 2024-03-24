@@ -132,8 +132,8 @@ namespace Client
 		public static string defaultHost = "localhost";
 		public static int defaultPort = 15672;
 		
-		User? user;
-		Host? host;
+		User user;
+		Host host;
 
 		static ConnectionFactory factory = new ConnectionFactory();
 		static IConnection? connection;
@@ -156,7 +156,7 @@ namespace Client
 				{
 					Message message = Message.Receive(ea.Body.ToArray());
 
-					Terminal.Print(message);
+					Terminal.Print(message.message);
 				};
 				channel.BasicConsume(queue: "room", autoAck: true, consumer: consumer);
 				await Task.Delay(-1);
@@ -180,7 +180,7 @@ namespace Client
 				while (true)
 				{
 					Console.Write($"[{user.username}]: ");
-					string chatMessage = Console.ReadLine();
+					string chatMessage = Terminal.ReadLine();
 
 					Message message = new Message(chatMessage, Encoding.UTF8, user);
 
