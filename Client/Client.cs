@@ -152,6 +152,7 @@ namespace Client
 			{
 				Terminal.Print($"Listening to [{this.host.host}]...");
 				EventingBasicConsumer consumer = new EventingBasicConsumer(channel);
+
 				consumer.Received += (model, ea) =>
 				{
 					Message message = Message.Receive(ea.Body.ToArray());
@@ -161,7 +162,6 @@ namespace Client
 				channel.BasicConsume(queue: "room", autoAck: true, consumer: consumer);
 				await Task.Delay(-1);
 			};
-
 		}
 
 		public async Task Connect()
@@ -185,7 +185,7 @@ namespace Client
 					Message message = new Message(chatMessage, Encoding.UTF8, user);
 
 					message.Send(channel, routingKey);
-					await Task.Delay(1000);
+					await Task.Delay(100);
 				}
 			};
 

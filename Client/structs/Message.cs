@@ -25,7 +25,7 @@ namespace Client
 
 		public Message(byte[] messageBytes)
 		{
-
+			
 		}
 
 		public string Serialize(string message)
@@ -50,12 +50,20 @@ namespace Client
 			return encodedBytes;
 		}
 
+		public byte[] Encoded(string input)
+		{
+			byte[] encodedBytes = encoding.GetBytes(input);
+
+			return encodedBytes;
+		}
+
 		public void Send(IModel channel, string routingKey)
 		{
+			string serialized = Serialize(this.message);
 			channel.BasicPublish(exchange: "direct_logs",
 				routingKey: routingKey,
 				basicProperties: null,
-				body: this.Encoded());
+				body: this.Encoded(serialized));
 		}
 
 		public static Message Receive(byte[] messageBytes)
