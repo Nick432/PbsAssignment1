@@ -8,12 +8,12 @@ using EasyNetQ;
 using EasyNetQ.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using EasyNetQ.DI;
+using Client.Structs;
 
 namespace Client.Program
 {
 	class Program
 	{
-		
 		static User user = new User("NULL", "NULL");
 		static Host host = new Host("localhost", 15672);
 		static Client client = new Client(user, host);
@@ -48,6 +48,7 @@ namespace Client.Program
 
 				host = new Host(hostName, port);
 
+				Terminal.Print($"Connecting to {host.host}:{host.port}...");
 				host.validHost = await host.Validate();
 
 				valid = host.validHost;

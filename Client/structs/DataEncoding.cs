@@ -10,23 +10,17 @@ namespace Client.Structs
 	{
 		public static Encoding GetEncoding(byte[] byteArray)
 		{
-			int i = -1;
-			while (i++ < byteArray.Length)
-			{
-				char c = BitConverter.ToChar(byteArray, i);
-			}
-
-
+			// To-do - just use UTF-8 as default
 			return Encoding.UTF8;
 		}
-		public static string Decode(byte[] message)
+		public static string[] Decode(byte[] message)
 		{
 			Encoding encoding = GetEncoding(message);
 
-			string decoded = "";
+			string decoded = encoding.GetString(message);
+			string[] arr = decoded.Split(Message.field);
 
-
-			return decoded;
+			return arr;
 		}
 	}
 }

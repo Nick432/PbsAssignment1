@@ -3,100 +3,10 @@ using System.Text;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using Libs.Terminal;
+using Client.Structs;
 
 namespace Client
 {
-	public class Host
-	{
-		public string host = "localhost";
-		public bool validHost = false;
-		int port = 0;
-
-		public Host(string host, int port)
-		{
-			this.host = host;
-			this.port = port;
-		}
-
-		public async Task<bool> Validate()
-		{
-			Terminal.Print($"Attempting connection to {host}:{port}...");
-			bool validated = false;
-
-			using (HttpClient client = new HttpClient())
-			{
-				try
-				{
-					HttpResponseMessage response = await client.GetAsync(this.FormatHost());
-					if (response.IsSuccessStatusCode)
-					{
-						return true;
-					}
-					else
-					{
-						return false;
-					}
-				}
-				catch (Exception ex)
-				{
-					ErrorMessage error = new ErrorMessage("Error finding host: " + ex.Message);
-					Console.WriteLine(error.ToString());
-				}
-			}
-			return validated;
-		}
-
-		public string FormatHost()
-		{
-			return new string($"http://{this.host}:{port}/");
-		}
-	}
-
-	public class User
-	{
-		public string username = "";
-		public string address = "";
-		public bool validUser = false;
-
-		public User(string username, string address)
-		{
-			this.username = username;
-			this.address = address;
-		}
-
-		public async Task<bool> Validate()
-		{
-			bool validated = false;
-
-			string base64Auth = Convert.ToBase64String(System.Text.Encoding.ASCII.GetBytes($"{username}:guest"));
-
-			using (HttpClient client = new HttpClient())
-			{
-				client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", base64Auth);
-
-				try
-				{
-					HttpResponseMessage response = await client.GetAsync(Client.apiUrl); 
-
-					if (response.IsSuccessStatusCode)
-					{
-						return true;
-					}
-					else
-					{
-						return false;
-					}
-				}
-				catch (Exception ex)
-				{
-					ErrorMessage error = new ErrorMessage("Error validating user: " + ex.Message);
-					Console.WriteLine(error.ToString());
-				}
-			}
-			return validated;
-		}
-	}
-
 	public class Connection
 	{
 		// Connection Variables
@@ -157,7 +67,10 @@ namespace Client
 				{
 					Message message = Message.Receive(ea.Body.ToArray());
 
-					Terminal.Print(message.message);
+					if (message.channel.name == user.currentChannel.name)
+					{
+						Terminal.Print(message.FormatMessage());
+					}
 				};
 				channel.BasicConsume(queue: "room", autoAck: true, consumer: consumer);
 				await Task.Delay(-1);
@@ -174,18 +87,21 @@ namespace Client
 				channel.ExchangeDeclare(exchange: "direct_logs", type: "direct");
 
 				string routingKey = "chatMessage";
+				Channel messageRoom = new Channel("General");
 
-				Message.Joined(user, channel, routingKey);
+				user.SetChannel(messageRoom);
+				Message.Joined(user, channel, routingKey, messageRoom);
 
 				while (true)
 				{
-					Console.Write($"[{user.username}]: ");
+					await Task.Delay(1000);
+					Terminal.Write($"[{user.currentChannel.name}][{user.username}]: ");
 					string chatMessage = Terminal.ReadLine();
 
-					Message message = new Message(chatMessage, Encoding.UTF8, user);
+					Message message = new Message(chatMessage, Encoding.UTF8, user, messageRoom);
 
 					message.Send(channel, routingKey);
-					await Task.Delay(100);
+					
 				}
 			};
 

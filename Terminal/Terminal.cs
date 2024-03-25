@@ -9,6 +9,11 @@ namespace Libs.Terminal
 			Console.WriteLine(message);
 		}
 
+		public static void Write(string message)
+		{
+			Console.Write(message);
+		}
+
 		public static void Print(params object[] args)
 		{
 			string output = "";
