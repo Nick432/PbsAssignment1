@@ -14,6 +14,8 @@ namespace Client.Program
 {
 	class Program
 	{
+		static bool debug = true;
+
 		static User user = new User("NULL", "NULL");
 		static Host host = new Host("localhost", 15672);
 		static Client client = new Client(user, host);
@@ -99,28 +101,52 @@ namespace Client.Program
 
 		public static async Task Initialize()
 		{
-			bool validHost = false;
-			bool validUser = false;
+			Task listen;
+			Task connect;
 
-			while (!validHost)
+			if (debug)
 			{
-				validHost = await ValidateHost(); 
-			}
+				await ValidateUser();
+				host = new Host(Client.defaultHost, Client.defaultPort);
 
-			while (!validUser)
-			{
-				validUser = await ValidateUser();
-			}
-
-			if (validUser && validHost)
-			{
 				client = new Client(user, host);
 
-				Task listen = client.Listen();
-				Task connect = client.Connect();
-				
+
+				listen = client.Listen();
+				connect = client.Connect();
+
 				await Task.WhenAll(listen, connect);
 			}
+			else
+			{
+				bool validHost = false;
+				bool validUser = false;
+
+				while (!validHost)
+				{
+					//validHost = await ValidateHost(); 
+				}
+
+				while (!validUser)
+				{
+					//validUser = await ValidateUser();
+				}
+
+
+
+				if (validUser && validHost)
+				{
+					client = new Client(user, host);
+
+
+					listen = client.Listen();
+					connect = client.Connect();
+
+					await Task.WhenAll(listen, connect);
+				}
+			}
+
+
 		}
 
 		public static int Main(string[] args)

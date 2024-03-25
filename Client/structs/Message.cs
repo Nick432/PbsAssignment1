@@ -39,10 +39,13 @@ namespace Client.Structs
 
 		public string Serialize(string message)
 		{
-			//$sam:$encoding.utf8:%message;
-			//$sam:$encoding.utf8:#3:#6:$message;
-			
-			return new string($"{this.encoding}{field}{channel.name}{field}{sender.username}{field}{this.message}");
+			string serializedString = new string(
+				$"{this.encoding}{field}"	+ 
+				$"{channel.name}{field}"	+ 
+				$"{sender.username}{field}" + 
+				$"{this.message}");
+
+			return serializedString;
 		}
 
 		public string FormatMessage(string message)
@@ -76,7 +79,7 @@ namespace Client.Structs
 		public void Send(IModel channel, string routingKey)
 		{
 			string serialized = Serialize(this.message);
-			channel.BasicPublish(exchange: "direct_logs",
+			channel.BasicPublish(exchange: Client.defaultExchange,
 				routingKey: routingKey,
 				basicProperties: null,
 				body: this.Encoded(serialized));

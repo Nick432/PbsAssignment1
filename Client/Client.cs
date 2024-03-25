@@ -41,7 +41,12 @@ namespace Client
 
 		public static string defaultHost = "localhost";
 		public static int defaultPort = 15672;
-		
+
+		public static string defaultExchange = "amq.topic";
+		public static string defaultExchangeType = "topic";
+		public static string defaultRoom = "room";
+		public static string defaultQueue = "room";
+
 		User user;
 		Host host;
 
@@ -63,16 +68,21 @@ namespace Client
 				Terminal.Print($"Listening to [{this.host.host}]...");
 				EventingBasicConsumer consumer = new EventingBasicConsumer(channel);
 
+				channel.ExchangeDeclare(exchange: defaultExchange, type: defaultExchangeType, durable: true);
+				channel.QueueBind(queue: defaultQueue, exchange: defaultExchange, routingKey: "");
+
 				consumer.Received += (model, ea) =>
 				{
 					Message message = Message.Receive(ea.Body.ToArray());
 
-					if (message.channel.name == user.currentChannel.name)
+					if (message.sender.username != user.username)
 					{
+						Terminal.EraseLine();
 						Terminal.Print(message.FormatMessage());
+						InputMessage();
 					}
 				};
-				channel.BasicConsume(queue: "room", autoAck: true, consumer: consumer);
+				channel.BasicConsume(queue: defaultQueue, autoAck: false, consumer: consumer);
 				await Task.Delay(-1);
 			};
 		}
@@ -84,9 +94,10 @@ namespace Client
 			using (connection = factory.CreateConnection())
 			using (channel = connection.CreateModel())
 			{
-				channel.ExchangeDeclare(exchange: "direct_logs", type: "direct");
+				channel.ExchangeDeclare(exchange: defaultExchange, type: "topic", durable: true);
+				channel.QueueBind(queue: defaultQueue, exchange: defaultExchange, routingKey: "");
 
-				string routingKey = "chatMessage";
+				string routingKey = "";
 				Channel messageRoom = new Channel("General");
 
 				user.SetChannel(messageRoom);
@@ -94,19 +105,23 @@ namespace Client
 
 				while (true)
 				{
-					await Task.Delay(1000);
-					Terminal.Write($"[{user.currentChannel.name}][{user.username}]: ");
+					await Task.Delay(50);
+					InputMessage();
 					string chatMessage = Terminal.ReadLine();
 
 					Message message = new Message(chatMessage, Encoding.UTF8, user, messageRoom);
 
 					message.Send(channel, routingKey);
-					
+					message.Send(channel, routingKey);
+
 				}
 			};
 
 		}
 
-
+		void InputMessage()
+		{
+			Terminal.Write($"[{user.currentChannel.name}][{user.username}]: ");
+		}
 	}
 }
