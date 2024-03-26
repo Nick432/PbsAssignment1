@@ -42,10 +42,11 @@ namespace Client
 		public static string defaultHost = "localhost";
 		public static int defaultPort = 15672;
 
-		public static string defaultExchange = "amq.topic";
-		public static string defaultExchangeType = "topic";
+		public static string defaultExchange = "amq.fanout";
+		public static string defaultExchangeType = "fanout";
 		public static string defaultRoom = "room";
-		public static string defaultQueue = "room";
+		public static string defaultQueue = string.Empty;
+		public static bool defaultDurability = true;
 
 		User user;
 		Host host;
@@ -60,6 +61,9 @@ namespace Client
 			this.host = host;
 		}
 
+		// Events
+
+
 		public async Task Listen()
 		{
 			using (connection = factory.CreateConnection())
@@ -68,8 +72,22 @@ namespace Client
 				Terminal.Print($"Listening to [{this.host.host}]...");
 				EventingBasicConsumer consumer = new EventingBasicConsumer(channel);
 
-				channel.ExchangeDeclare(exchange: defaultExchange, type: defaultExchangeType, durable: true);
-				channel.QueueBind(queue: defaultQueue, exchange: defaultExchange, routingKey: "");
+				user.currentQueue = channel.QueueDeclare().QueueName;
+
+				channel.ExchangeDeclare(exchange: defaultExchange, type: defaultExchangeType, durable: defaultDurability);
+				try
+				{
+					//channel.QueueDeclare(queue: defaultQueue, durable: true, exclusive: false, autoDelete: false, arguments: null);
+					channel.QueueBind(queue: user.currentQueue, exchange: defaultExchange, routingKey: "");
+				}
+				catch (Exception ex)
+				{
+					ErrorMessage error = new ErrorMessage($"Error binding queue: {defaultQueue}: declaring new queue...");
+					Terminal.Print(error.ToString());
+
+					
+				}
+				
 
 				consumer.Received += (model, ea) =>
 				{
@@ -79,7 +97,8 @@ namespace Client
 					{
 						Terminal.EraseLine();
 						Terminal.Print(message.FormatMessage());
-						InputMessage();
+
+						Message.ChatField(user, host);
 					}
 				};
 				channel.BasicConsume(queue: defaultQueue, autoAck: false, consumer: consumer);
@@ -94,8 +113,8 @@ namespace Client
 			using (connection = factory.CreateConnection())
 			using (channel = connection.CreateModel())
 			{
-				channel.ExchangeDeclare(exchange: defaultExchange, type: "topic", durable: true);
-				channel.QueueBind(queue: defaultQueue, exchange: defaultExchange, routingKey: "");
+				channel.ExchangeDeclare(exchange: defaultExchange, type: defaultExchangeType, durable: defaultDurability);
+				//channel.QueueBind(queue: user.currentQueue, exchange: defaultExchange, routingKey: "");
 
 				string routingKey = "";
 				Channel messageRoom = new Channel("General");
@@ -106,22 +125,12 @@ namespace Client
 				while (true)
 				{
 					await Task.Delay(50);
-					InputMessage();
-					string chatMessage = Terminal.ReadLine();
 
-					Message message = new Message(chatMessage, Encoding.UTF8, user, messageRoom);
-
-					message.Send(channel, routingKey);
-					message.Send(channel, routingKey);
-
+					Message.ChatField(user, host);
+					Message.Input(channel, user, routingKey);
 				}
 			};
 
-		}
-
-		void InputMessage()
-		{
-			Terminal.Write($"[{user.currentChannel.name}][{user.username}]: ");
 		}
 	}
 }

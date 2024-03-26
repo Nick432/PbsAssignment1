@@ -12,6 +12,7 @@ namespace Client.Structs
 		public string address = "";
 		public bool validUser = false;
 		public Channel currentChannel;
+		public string currentQueue = "";
 
 		public User(string username, string address)
 		{

@@ -6,8 +6,10 @@ using System.Threading.Tasks;
 
 namespace Client
 {
-	public class Commands
+	public static class Commands
 	{
+		// dictionary for commands in here
+		
 
 	}
 }
