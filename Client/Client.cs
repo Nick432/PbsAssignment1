@@ -80,7 +80,7 @@ namespace Client
 					//channel.QueueDeclare(queue: defaultQueue, durable: true, exclusive: false, autoDelete: false, arguments: null);
 					channel.QueueBind(queue: user.currentQueue, exchange: defaultExchange, routingKey: "");
 				}
-				catch (Exception ex)
+				catch
 				{
 					ErrorMessage error = new ErrorMessage($"Error binding queue: {defaultQueue}: declaring new queue...");
 					Terminal.Print(error.ToString());

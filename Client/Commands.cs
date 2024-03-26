@@ -12,13 +12,14 @@ namespace Client
 	{
 		public string name;
 		public string shortcut;
-		string? arg;
-		Action action;
-		Action<string> action_arg;
+		public string syntax = "";
+		string? arg = "";
+		Action? action;
+		Action<string>? action_arg;
 
 
 
-		public Command(string name, Action action, string args = null)
+		public Command(string name, Action action, string args = "default")
 		{
 			this.name = name;
 			this.action = action;
@@ -36,14 +37,14 @@ namespace Client
 
 		public void Invoke()
 		{
-			if (this.action_arg != null)
-			{
-				this.action_arg.Invoke(this.arg);
-			}
-			else
-			{
+			if (this.action != null)
 				this.action.Invoke();
-			}
+		}
+
+		public void Invoke(string arg)
+		{
+			if (this.action_arg != null)
+				this.action_arg.Invoke(this.arg);
 		}
 	}
 	public static class Commands
@@ -58,7 +59,7 @@ namespace Client
 			new Command("Change Name", ChangeName)
 		};
 
-		public static Command GetCommand(string command)
+		public static Command? GetCommand(string command)
 		{
 			for (int i = 0; i < commands.Length; i++)
 			{
@@ -91,7 +92,7 @@ namespace Client
 
 				if (command != null)
 				{
-					command.Invoke();
+					command.Invoke(inputargs[1]);
 				}
 				else
 				{
