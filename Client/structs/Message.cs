@@ -96,7 +96,8 @@ namespace Client.Structs
 
 		public static void Joined(User user, IModel channel, string routingKey, Channel chatChannel)
 		{
-			Message joined = new Message($"Joined {DateTime.Now}", Encoding.UTF8, user, chatChannel);
+			Message joined = new Message($"Joined", Encoding.UTF8, user, chatChannel);
+
 			joined.Send(channel, routingKey);
 		}
 
@@ -104,12 +105,49 @@ namespace Client.Structs
 		{
 			Terminal.Write($"[{user.currentChannel.name}][{user.username}]:");
 		}
-		public static void Input(IModel channel, User user, string routingKey)
+
+		public static void HandleInput(IModel channel, User user, string routingKey)
 		{
 			string chatMessage = Terminal.ReadLine();
 
-			Message message = new Message(chatMessage, Encoding.UTF8, user, user.currentChannel);
-			message.Send(channel, routingKey);
+			if (!Commands.HandleCommandInput(chatMessage))
+			{
+				Message message = new Message(chatMessage, Encoding.UTF8, user, user.currentChannel);
+				message.Send(channel, routingKey);
+			}
+		}
+	}
+
+	public class Broadcast
+	{
+		User user;
+		public string announcement = "";
+		public Broadcast(User user)
+		{
+			this.user = user;
+		}
+
+		public void Announce()
+		{
+			// send announcement here
+		}
+
+	}
+
+	public class JoinedBroadcast : Broadcast
+	{
+		
+		public JoinedBroadcast(User user) : base(user)
+		{
+			base.announcement = "Joined";
+		}
+	}
+
+	public class LeftBroadcast : Broadcast
+	{
+		public LeftBroadcast(User user) : base(user)
+		{
+			base.announcement = "Left";
 		}
 	}
 }

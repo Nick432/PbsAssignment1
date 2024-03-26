@@ -127,7 +127,7 @@ namespace Client
 					await Task.Delay(50);
 
 					Message.ChatField(user, host);
-					Message.Input(channel, user, routingKey);
+					Message.HandleInput(channel, user, routingKey);
 				}
 			};
 
