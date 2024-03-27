@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Client.Structs
+namespace Client.UserData
 {
 	public class Host
 	{
@@ -26,7 +26,7 @@ namespace Client.Structs
 			{
 				try
 				{
-					HttpResponseMessage response = await client.GetAsync(this.FormatHost());
+					HttpResponseMessage response = await client.GetAsync(FormatHost());
 					if (response.IsSuccessStatusCode)
 					{
 						return true;
@@ -47,7 +47,7 @@ namespace Client.Structs
 
 		public string FormatHost()
 		{
-			return new string($"http://{this.host}:{port}/");
+			return new string($"http://{host}:{port}/");
 		}
 	}
 }

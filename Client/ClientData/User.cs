@@ -4,11 +4,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Client.Structs
+namespace Client.UserData
 {
 	public class User
 	{
 		public string username = "";
+		public string nickname = "";
 		public string address = "";
 		public bool validUser = false;
 		public Channel currentChannel;
@@ -17,19 +18,25 @@ namespace Client.Structs
 		public User(string username, string address)
 		{
 			this.username = username;
+			this.nickname = username;
 			this.address = address;
 		}
 
 		public void SetChannel(Channel channel)
 		{
-			this.currentChannel = channel;
+			currentChannel = channel;
+		}
+
+		public void ChangeNickname(string newName)
+		{
+			this.nickname = newName;
 		}
 
 		public async Task<bool> Validate()
 		{
 			bool validated = false;
 
-			string base64Auth = Convert.ToBase64String(System.Text.Encoding.ASCII.GetBytes($"{username}:guest"));
+			string base64Auth = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{username}:guest"));
 
 			using (HttpClient client = new HttpClient())
 			{

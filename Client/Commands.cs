@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Libs.Terminal;
 using Client.Structs;
+using Client.UserData;
 
 namespace Client
 {
@@ -16,6 +17,8 @@ namespace Client
 		string? arg = "";
 		Action? action;
 		Action<string>? action_arg;
+		public int args = 0;
+		public Type dataType;
 
 
 
@@ -27,12 +30,14 @@ namespace Client
 			this.arg = args;
 		}
 
-		public Command(string name, Action<string> action, string args = "default")
+		public Command(string name, Action<string> action, int numArgs, Type type, string args = "default")
 		{
 			this.name = name;
 			this.action_arg = action;
 			this.shortcut = name.Replace(" ", "").ToLower();
 			this.arg = args;
+			this.args = numArgs;
+			this.dataType = type;
 		}
 
 		public void Invoke()
@@ -44,7 +49,7 @@ namespace Client
 		public void Invoke(string arg)
 		{
 			if (this.action_arg != null)
-				this.action_arg.Invoke(this.arg);
+				this.action_arg.Invoke(arg);
 		}
 	}
 	public static class Commands
@@ -55,8 +60,8 @@ namespace Client
 		static Command[] commands =
 		{
 			new Command("Help", Help),
-			new Command("Change Room", ChangeRoom),
-			new Command("Change Name", ChangeName)
+			new Command("Change Room", ChangeRoom, 1, typeof(string)),
+			new Command("Change Name", ChangeName, 1, typeof(string))
 		};
 
 		public static Command? GetCommand(string command)
@@ -78,21 +83,31 @@ namespace Client
 		}
 		public static bool HandleCommandInput(string input)
 		{
-			bool isCommand = false;
+
+			if (input == "")
+				return false;
 
 			if ((char)input[0] == commandChar)
-			{
-				isCommand = true;
-				
+			{				
 				string inputCommand = input[1..];
 
 				string[] inputargs = inputCommand.Split(" ").ToArray();
 
-				Command command = Commands.GetCommand(inputCommand);
+				Command command = Commands.GetCommand(inputargs[0]);
 
 				if (command != null)
 				{
-					command.Invoke(inputargs[1]);
+					if (command.args == 0)
+					{
+						command.Invoke();
+					}
+					else
+					{
+						command.Invoke(inputargs[1]);
+					}
+					
+					return true;
+					
 				}
 				else
 				{
@@ -101,7 +116,7 @@ namespace Client
 				}
 			}
 
-			return isCommand;
+			return false;
 		}
 
 
@@ -118,13 +133,14 @@ namespace Client
 
 		public static void ChangeRoom(string room)
 		{
-			Terminal.Print("Change Room Command", room);
-
+			Client.user.SetChannel(new Channel(room));
+			Terminal.Print("Changed Room to: ", room);
 		}
 
 		public static void ChangeName(string newName)
 		{
-			Terminal.Print("Change Name Command", newName);
+			Client.user.ChangeNickname(newName);
+			Terminal.Print("Changed nickname to: ", newName);
 		}
 
 		public static void Exit()

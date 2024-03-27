@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using RabbitMQ.Client;
 using Libs.Terminal;
+using Client.UserData;
 
 namespace Client.Structs
 {
@@ -14,8 +15,10 @@ namespace Client.Structs
 		public string message;
 		Encoding encoding;
 		public User sender;
+
 		public static char field = (char)11;
 		public static char record = (char)12;
+
 		public Channel channel;
 		DateTime timeStamp;
 
@@ -90,7 +93,6 @@ namespace Client.Structs
 		{
 			Message message = new Message(messageBytes);
 
-
 			return message;
 		}
 
@@ -103,14 +105,14 @@ namespace Client.Structs
 
 		public static void ChatField(User user, Host host)
 		{
-			Terminal.Write($"[{user.currentChannel.name}][{user.username}]:");
+			Terminal.Write($"[{user.currentChannel.name}][{user.nickname}]:");
 		}
 
 		public static void HandleInput(IModel channel, User user, string routingKey)
 		{
 			string chatMessage = Terminal.ReadLine();
-
-			if (!Commands.HandleCommandInput(chatMessage))
+			 
+			if (Commands.HandleCommandInput(chatMessage) == null)
 			{
 				Message message = new Message(chatMessage, Encoding.UTF8, user, user.currentChannel);
 				message.Send(channel, routingKey);

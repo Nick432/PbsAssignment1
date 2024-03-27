@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text;
+using System.Threading.Tasks;
 using Libs.Terminal;
 using Client;
 using RabbitMQ.Client;
@@ -8,7 +9,7 @@ using EasyNetQ;
 using EasyNetQ.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using EasyNetQ.DI;
-using Client.Structs;
+using Client.UserData;
 
 namespace Client.Program
 {
@@ -16,106 +17,34 @@ namespace Client.Program
 	{
 		static bool debug = true;
 
-		static User user = new User("NULL", "NULL");
-		static Host host = new Host("localhost", 15672);
-		static Client client = new Client(user, host);
+		public static User user = new User("NULL", "NULL");
+		public static Host host = new Host("localhost", 15672);
+		public static Client client = new Client(user, host);
 
-		static async Task<bool> ValidateHost()
-		{
-			bool valid = false;
-			int attempt = 0;
-
-			while (!valid && attempt < ClientConfig.MaxLoginAttempts)
-			{
-				string hostName = "";
-				int port = 0;
-				string input = Terminal.Prompt("Enter a host (e.g. localhost):");
-
-				if (input == "")
-				{
-					hostName = Client.defaultHost;
-					port = Client.defaultPort;
-				}
-				else
-				{
-					string[] subString = input.Split(':');
-					hostName = subString[0];
-					port = int.Parse(subString[1]);
-
-					if (port == 0)
-					{
-						port = Client.defaultPort;
-					}
-				}
-
-				host = new Host(hostName, port);
-
-				Terminal.Print($"Connecting to {host.host}:{host.port}...");
-				host.validHost = await host.Validate();
-
-				valid = host.validHost;
-
-				if (!valid)
-				{
-					Terminal.Print($"Invalid host. Attempt: {attempt+1}/{ClientConfig.MaxLoginAttempts}");
-					attempt++;
-				}
-				else
-				{
-					break;
-				}
-			}
-			return host.validHost;
-		}
-
-		static async Task<bool> ValidateUser()
-		{
-			int attempt = 0;
-			bool valid = false;
-
-			while (!valid && attempt < ClientConfig.MaxLoginAttempts)
-			{
-				string Username = Terminal.Prompt("Enter your username:");
-
-				user = new User(Username, "NULL");
-				user.validUser = await user.Validate();
-
-				if (user.validUser)
-				{
-					valid = true;
-				}
-				else
-				{
-					Terminal.Print($"Invalid username. Attempt: {attempt+1}/{ClientConfig.MaxLoginAttempts}");
-					attempt++;
-				}
-			}
-
-			if (!valid)
-			{
-				return false;
-			}
-
-			return true;
-		}
-
-		public static async Task Initialize()
+		public static async Task Connect()
 		{
 			Task listen;
 			Task connect;
 
+			host = new Host(Client.defaultHost, Client.defaultPort);
+
+			client = new Client(user, host);
+
+			listen = client.Listen();
+			connect = client.Connect();
+
+			await Task.WhenAll(listen, connect);
+		}
+
+		public static async Task Initialize()
+		{
+
+
 			if (debug)
 			{
-				await ValidateUser();
-				host = new Host(Client.defaultHost, Client.defaultPort);
+				await Authenticate.ValidateUser();
 
-				client = new Client(user, host);
-
-
-				listen = client.Listen();
-				connect = client.Connect();
-
-				await Task.WhenAll(listen, connect);
+				await Connect();
 			}
 			else
 			{
@@ -124,7 +53,7 @@ namespace Client.Program
 
 				while (!validHost)
 				{
-					//validHost = await ValidateHost(); 
+					validHost = await Authenticate.ValidateHost(); 
 				}
 
 				while (!validUser)
@@ -132,21 +61,13 @@ namespace Client.Program
 					//validUser = await ValidateUser();
 				}
 
-
-
 				if (validUser && validHost)
 				{
 					client = new Client(user, host);
 
-
-					listen = client.Listen();
-					connect = client.Connect();
-
-					await Task.WhenAll(listen, connect);
+					await Connect();
 				}
 			}
-
-
 		}
 
 		public static int Main(string[] args)

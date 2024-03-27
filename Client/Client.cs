@@ -4,6 +4,7 @@ using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using Libs.Terminal;
 using Client.Structs;
+using Client.UserData;
 
 namespace Client
 {
@@ -48,28 +49,34 @@ namespace Client
 		public static string defaultQueue = string.Empty;
 		public static bool defaultDurability = true;
 
-		User user;
-		Host host;
+		public static User user = new User("NULL", "NULL");
+		public static Host host = new Host(defaultHost, defaultPort);
 
 		static ConnectionFactory factory = new ConnectionFactory();
 		static IConnection? connection;
 		static IModel? channel;
 
-		public Client(User user, Host host)
+		public Client(User _user, Host _host)
 		{
-			this.user = new User(user.username, host.host);
-			this.host = host;
+			user = new User(_user.username, host.host);
+			host = _host;
 		}
 
 		// Events
 
+		public event EventHandler? OnMessageReceived;
+
+		protected virtual void MessageReceived(EventArgs e, Message message)
+		{
+			OnMessageReceived?.Invoke(message, e);
+		}
 
 		public async Task Listen()
 		{
 			using (connection = factory.CreateConnection())
 			using (channel = connection.CreateModel())
 			{
-				Terminal.Print($"Listening to [{this.host.host}]...");
+				Terminal.Print($"Listening to [{host.host}]...");
 				EventingBasicConsumer consumer = new EventingBasicConsumer(channel);
 
 				user.currentQueue = channel.QueueDeclare().QueueName;
@@ -77,21 +84,20 @@ namespace Client
 				channel.ExchangeDeclare(exchange: defaultExchange, type: defaultExchangeType, durable: defaultDurability);
 				try
 				{
-					//channel.QueueDeclare(queue: defaultQueue, durable: true, exclusive: false, autoDelete: false, arguments: null);
 					channel.QueueBind(queue: user.currentQueue, exchange: defaultExchange, routingKey: "");
 				}
 				catch
 				{
 					ErrorMessage error = new ErrorMessage($"Error binding queue: {defaultQueue}: declaring new queue...");
 					Terminal.Print(error.ToString());
-
-					
 				}
 				
 
 				consumer.Received += (model, ea) =>
 				{
 					Message message = Message.Receive(ea.Body.ToArray());
+
+					MessageReceived(EventArgs.Empty, message); // fire message event so ChatClient front-end can subscribe to events and handle messages accordingly. (To-do)
 
 					if (message.sender.username != user.username)
 					{
@@ -108,7 +114,7 @@ namespace Client
 
 		public async Task Connect()
 		{
-			factory = new ConnectionFactory() { HostName = this.host.host};
+			factory = new ConnectionFactory() { HostName = host.host};
 
 			using (connection = factory.CreateConnection())
 			using (channel = connection.CreateModel())
@@ -130,6 +136,10 @@ namespace Client
 					Message.HandleInput(channel, user, routingKey);
 				}
 			};
+		}
+
+		public void ChangeRoom()
+		{
 
 		}
 	}
