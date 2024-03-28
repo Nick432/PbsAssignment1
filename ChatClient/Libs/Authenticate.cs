@@ -20,6 +20,7 @@ namespace Client.Program
 				string Username = Terminal.Prompt("Enter your username:");
 
 				Program.user = new User(Username, "NULL");
+				Terminal.Print($"Authenticating...");
 				Program.user.validUser = await Program.user.Validate();
 
 				if (Program.user.validUser)
@@ -28,7 +29,6 @@ namespace Client.Program
 				}
 				else
 				{
-					Terminal.Print($"Invalid username. Attempt: {attempt + 1}/{ClientConfig.MaxLoginAttempts}");
 					attempt++;
 				}
 			}
@@ -37,7 +37,7 @@ namespace Client.Program
 			{
 				return false;
 			}
-
+			Terminal.Print($"User {Program.user.username} authenticated.");
 			return true;
 		}
 

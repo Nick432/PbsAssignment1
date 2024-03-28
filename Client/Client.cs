@@ -56,6 +56,10 @@ namespace Client
 		static IConnection? connection;
 		static IModel? channel;
 
+		bool running = true;
+		bool quitting = false;
+
+		CancellationTokenSource cts = new CancellationTokenSource();
 		public Client(User _user, Host _host)
 		{
 			user = new User(_user.username, host.host);
@@ -71,7 +75,7 @@ namespace Client
 			OnMessageReceived?.Invoke(message, e);
 		}
 
-		public async Task Listen()
+		public async Task Listen(CancellationToken cancelToken)
 		{
 			using (connection = factory.CreateConnection())
 			using (channel = connection.CreateModel())
@@ -80,6 +84,7 @@ namespace Client
 				EventingBasicConsumer consumer = new EventingBasicConsumer(channel);
 
 				user.currentQueue = channel.QueueDeclare().QueueName;
+				user.rabbitChannel = channel;
 
 				channel.ExchangeDeclare(exchange: defaultExchange, type: defaultExchangeType, durable: defaultDurability);
 				try
@@ -91,7 +96,6 @@ namespace Client
 					ErrorMessage error = new ErrorMessage($"Error binding queue: {defaultQueue}: declaring new queue...");
 					Terminal.Print(error.ToString());
 				}
-				
 
 				consumer.Received += (model, ea) =>
 				{
@@ -99,20 +103,23 @@ namespace Client
 
 					MessageReceived(EventArgs.Empty, message); // fire message event so ChatClient front-end can subscribe to events and handle messages accordingly. (To-do)
 
-					if (message.sender.username != user.username)
+					if (message.channel.name == user.currentChannel.name)
 					{
-						Terminal.EraseLine();
-						Terminal.Print(message.FormatMessage());
+						if (message.sender.username != user.username)
+						{
+							Terminal.EraseLine();
+							Terminal.Print(message.FormatMessage());
 
-						Message.ChatField(user, host);
+							Message.ChatField(user, host);
+						}
 					}
 				};
 				channel.BasicConsume(queue: defaultQueue, autoAck: false, consumer: consumer);
-				await Task.Delay(-1);
+				await Task.Delay(-1, cancelToken);
 			};
 		}
 
-		public async Task Connect()
+		public async Task Connect(CancellationToken cancelToken)
 		{
 			factory = new ConnectionFactory() { HostName = host.host};
 
@@ -120,27 +127,37 @@ namespace Client
 			using (channel = connection.CreateModel())
 			{
 				channel.ExchangeDeclare(exchange: defaultExchange, type: defaultExchangeType, durable: defaultDurability);
-				//channel.QueueBind(queue: user.currentQueue, exchange: defaultExchange, routingKey: "");
 
-				string routingKey = "";
+				user.SetRoutingKey("");
+				user.currentClient = this;
+				user.rabbitChannel = channel;
+				user.rabbitConnection = connection;
+
 				Channel messageRoom = new Channel("General");
 
 				user.SetChannel(messageRoom);
-				Message.Joined(user, channel, routingKey, messageRoom);
+				
+				Terminal.Print($"Type your messages below. Use {Commands.commandChar}help for a list of commands.");
 
-				while (true)
+				while (!cancelToken.IsCancellationRequested)
 				{
-					await Task.Delay(50);
+					if (quitting)
+					{
+						break;
+					}
+					await Task.Delay(50, cancelToken);
 
 					Message.ChatField(user, host);
-					Message.HandleInput(channel, user, routingKey);
+					Message.HandleInput(channel, user);
 				}
+				return;
 			};
 		}
 
-		public void ChangeRoom()
+		public void Disconnect()
 		{
-
+			running = false;
+			quitting = true;
 		}
 	}
 }

@@ -61,7 +61,8 @@ namespace Client
 		{
 			new Command("Help", Help),
 			new Command("Change Room", ChangeRoom, 1, typeof(string)),
-			new Command("Change Name", ChangeName, 1, typeof(string))
+			new Command("Change Name", ChangeName, 1, typeof(string)),
+			new Command("Exit", Exit)
 		};
 
 		public static Command? GetCommand(string command)
@@ -119,7 +120,6 @@ namespace Client
 			return false;
 		}
 
-
 		public static void Help()
 		{
 			string helpText = "";
@@ -146,6 +146,7 @@ namespace Client
 		public static void Exit()
 		{
 			Terminal.Print("Exit Command");
+			Client.user.Disconnect();
 		}
 	}
 }

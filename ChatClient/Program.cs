@@ -21,7 +21,7 @@ namespace Client.Program
 		public static Host host = new Host("localhost", 15672);
 		public static Client client = new Client(user, host);
 
-		public static async Task Connect()
+		public static async Task Connect(CancellationToken token)
 		{
 			Task listen;
 			Task connect;
@@ -30,21 +30,19 @@ namespace Client.Program
 
 			client = new Client(user, host);
 
-			listen = client.Listen();
-			connect = client.Connect();
-
-			await Task.WhenAll(listen, connect);
+			connect = client.Connect(token);
+			listen = client.Listen(token);
+			
+			await Task.WhenAny(listen, connect);
 		}
 
 		public static async Task Initialize()
 		{
-
-
 			if (debug)
 			{
 				await Authenticate.ValidateUser();
 
-				await Connect();
+				await Connect(new CancellationToken());
 			}
 			else
 			{
@@ -65,7 +63,7 @@ namespace Client.Program
 				{
 					client = new Client(user, host);
 
-					await Connect();
+					await Connect(new CancellationToken());
 				}
 			}
 		}
@@ -74,9 +72,9 @@ namespace Client.Program
 		{
 			// As we are running this task async we need to await the final result of all subsequent async tasks.
 			Initialize().GetAwaiter().GetResult();
+
+			Terminal.Print("Client closed, press any key to quit.");
 			return (0);
 		}
 	}
-
-	
 }
